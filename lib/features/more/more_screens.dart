@@ -9,6 +9,8 @@ import '../../core/json_util.dart';
 import '../../core/promo_price.dart';
 import '../../widgets/app_image.dart';
 import '../../widgets/product_card.dart';
+import '../../core/app_theme.dart';
+import '../../widgets/skeleton_loader.dart';
 import '../../widgets/ui_helpers.dart';
 import '../products/products_screens.dart';
 
@@ -119,9 +121,15 @@ class _SellersScreenState extends State<SellersScreen> {
       });
 
     return Scaffold(
+      backgroundColor: AppTheme.surfaceGrey,
       appBar: AppBar(title: Text(app.t('sellers'))),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: 6,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, __) => const SellerCardSkeleton(),
+            )
           : Column(
               children: [
                 if (types.isNotEmpty)
@@ -158,37 +166,33 @@ class _SellersScreenState extends State<SellersScreen> {
                 Expanded(
                   child: visible.isEmpty
                       ? EmptyState(message: app.t('no_stores_found'))
-                      : ListView(
-                          children: visible
-                              .map(
-                                (seller) => ListTile(
-                                  leading: SellerAvatar(
-                                    J.str(seller['logo_url']),
-                                    placeholder: app.placeholder,
-                                  ),
-                                  title: Text(
-                                    J.str(
-                                      seller['store_name'] ?? seller['name'],
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    [
-                                      '${seller['product_count'] ?? 0} ${app.t('products')}',
-                                      if (_distanceKm(seller) != null)
-                                        '${_distanceKm(seller)!.toStringAsFixed(1)} كم',
-                                    ].join(' · '),
-                                  ),
-                                  onTap: () {
-                                    final slug = J.str(seller['slug']);
-                                    context.push(
-                                      slug.isNotEmpty
-                                          ? '/store/$slug'
-                                          : '/seller/${seller['id']}',
-                                    );
-                                  },
-                                ),
-                              )
-                              .toList(),
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: visible.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (_, i) {
+                            final seller = visible[i];
+                            final distance = _distanceKm(seller);
+                            final rating = double.tryParse(
+                              '${seller['rating'] ?? seller['average_rating'] ?? 0}',
+                            );
+                            return _SellerCard(
+                              seller: seller,
+                              distance: distance,
+                              rating: rating,
+                              productCount:
+                                  '${seller['product_count'] ?? 0}',
+                              onTap: () {
+                                final slug = J.str(seller['slug']);
+                                context.push(
+                                  slug.isNotEmpty
+                                      ? '/store/$slug'
+                                      : '/seller/${seller['id']}',
+                                );
+                              },
+                            );
+                          },
                         ),
                 ),
               ],
@@ -373,7 +377,7 @@ class _OffersScreenState extends State<OffersScreen> {
                 ...categoryCards.map(
                   (item) => Card(
                     child: ListTile(
-                      leading: Icon(Icons.percent, color: app.brandColor),
+                      leading: Icon(Icons.percent, color: app.accentColor),
                       title: Text(J.str(item['category_name'])),
                       subtitle: Text(
                         '${item['discount']}${J.str(item['discount_type']) == 'percentage' ? '%' : ''}',
@@ -389,7 +393,7 @@ class _OffersScreenState extends State<OffersScreen> {
                     child: ListTile(
                       leading: Icon(
                         Icons.confirmation_number_outlined,
-                        color: app.brandColor,
+                        color: app.accentColor,
                       ),
                       title: Text(J.str(item['promo_code'])),
                       subtitle: Text(J.str(item['message'])),
@@ -401,7 +405,7 @@ class _OffersScreenState extends State<OffersScreen> {
                     child: ListTile(
                       leading: Icon(
                         Icons.local_shipping_outlined,
-                        color: app.brandColor,
+                        color: app.accentColor,
                       ),
                       title: Text(
                         J.str(
@@ -691,7 +695,7 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
                 app.decimals,
               ),
               style: TextStyle(
-                color: app.brandColor,
+                color: app.accentColor,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -999,6 +1003,163 @@ class _CmsScreenState extends State<CmsScreen> {
               padding: const EdgeInsets.all(16),
               child: HtmlText(html),
             ),
+    );
+  }
+}
+
+class _SellerCard extends StatelessWidget {
+  const _SellerCard({
+    required this.seller,
+    required this.onTap,
+    this.distance,
+    this.rating,
+    required this.productCount,
+  });
+
+  final Map<String, dynamic> seller;
+  final VoidCallback onTap;
+  final double? distance;
+  final double? rating;
+  final String productCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = appController;
+    final name = J.str(seller['store_name'] ?? seller['name']);
+    final hasDelivery = J.flag(seller['delivery']) ||
+        J.str(seller['delivery_type']).isNotEmpty;
+
+    return Material(
+      color: AppTheme.backgroundWhite,
+      elevation: 2,
+      shadowColor: AppTheme.primaryNavy.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: AppImage(
+                    J.str(seller['logo_url']),
+                    placeholder: app.placeholder,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (rating != null && rating! > 0) ...[
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 14,
+                            color: AppTheme.accentOrange,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            rating!.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.accentOrange,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Text(
+                          '$productCount ${app.t('products')}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (hasDelivery)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentOrange
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.delivery_dining,
+                                  size: 12,
+                                  color: AppTheme.accentOrange,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  app.t('delivery') == 'delivery'
+                                      ? 'توصيل'
+                                      : app.t('delivery'),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppTheme.accentOrange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (distance != null) ...[
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.near_me,
+                            size: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${distance!.toStringAsFixed(1)} كم',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_left,
+                color: AppTheme.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

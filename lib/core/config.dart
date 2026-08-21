@@ -19,6 +19,7 @@ class AppConfig {
     'API_SUBURL',
     defaultValue: '/customer',
   );
-  static const defaultColor = 0xFF33A36B;
+  static const defaultColor = 0xFF0A2540;
+  static const accentColor = 0xFFFF6B00;
   static const productPageSize = 12;
 }

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/app_controller.dart';
+import '../core/app_theme.dart';
+import 'skeleton_loader.dart';
 
 class BusySpinner extends StatelessWidget {
-  const BusySpinner({super.key, this.color = Colors.white});
+  const BusySpinner({super.key, this.color = AppTheme.accentOrange});
   final Color color;
 
   @override
@@ -39,12 +41,16 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 56, color: Colors.grey.shade500),
+            Icon(icon, size: 56, color: AppTheme.textSecondary),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppTheme.textPrimary),
+            ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 16),
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+              BrandedButton(onPressed: onAction, label: actionLabel!),
             ],
           ],
         ),
@@ -62,6 +68,7 @@ Future<bool> confirmAction(
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(title),
       content: body == null ? null : Text(body),
       actions: [
@@ -93,6 +100,21 @@ class LoginRequired extends StatelessWidget {
       onAction: () => context.push('/login'),
     );
     if (!withScaffold) return body;
-    return Scaffold(appBar: AppBar(), body: body);
+    return Scaffold(
+      appBar: AppBar(title: Text(app.t('login'))),
+      body: body,
+    );
+  }
+}
+
+class BrandedLoading extends StatelessWidget {
+  const BrandedLoading({super.key, this.skeleton = false});
+
+  final bool skeleton;
+
+  @override
+  Widget build(BuildContext context) {
+    if (skeleton) return const HomeLoadingSkeleton();
+    return const Center(child: BusySpinner());
   }
 }

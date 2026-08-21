@@ -97,7 +97,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: isUser
-                          ? app.brandColor.withValues(alpha: 0.12)
+                          ? app.accentColor.withValues(alpha: 0.12)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -134,7 +134,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                             trailing: Text(
                               app.t('assistant_open_product'),
                               style: TextStyle(
-                                color: app.brandColor,
+                                color: app.accentColor,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),

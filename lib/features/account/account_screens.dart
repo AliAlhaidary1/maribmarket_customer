@@ -7,6 +7,8 @@ import '../../core/city_mode.dart';
 import '../../core/json_util.dart';
 import '../../core/promo_price.dart';
 import '../../widgets/app_image.dart';
+import '../../core/app_theme.dart';
+import '../../widgets/order_tracker.dart';
 import '../../widgets/ui_helpers.dart';
 
 class AccountScreen extends StatelessWidget {
@@ -59,7 +61,7 @@ class AccountScreen extends StatelessWidget {
         const SizedBox(height: 12),
         ListTile(
           leading: CircleAvatar(
-            backgroundColor: app.brandColor,
+            backgroundColor: app.accentColor,
             child: Text(name.isEmpty ? 'م' : name.substring(0, 1)),
           ),
           title: Text(name),
@@ -168,7 +170,7 @@ class AccountScreen extends StatelessWidget {
 
   Widget _tile(BuildContext context, IconData icon, String title, String path) {
     return ListTile(
-      leading: Icon(icon, color: appController.brandColor),
+      leading: Icon(icon, color: appController.accentColor),
       title: Text(title),
       trailing: const Icon(Icons.chevron_left),
       onTap: () => context.push(path),
@@ -375,11 +377,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            J.str(order?['status_name'] ?? order?['active_status']),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          OrderTracker(
+            status: J.str(order?['active_status'] ?? order?['status'] ?? ''),
+            statusLabel: J.str(
+              order?['status_name'] ?? order?['active_status'],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           ...items.map(
             (item) => ListTile(
               title: Text(J.str(item['product_name'] ?? item['name'])),
@@ -396,8 +400,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           const Divider(),
           Text(
             money(order?['final_total'], app.currency, app.decimals),
-            style: TextStyle(
-              color: app.brandColor,
+            style: const TextStyle(
+              color: AppTheme.accentOrange,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),

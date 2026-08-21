@@ -422,7 +422,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       money(price.finalPrice, app.currency, app.decimals),
                       style: TextStyle(
                         fontSize: 20,
-                        color: app.brandColor,
+                        color: app.accentColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

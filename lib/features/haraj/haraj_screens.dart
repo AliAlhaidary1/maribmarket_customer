@@ -165,7 +165,7 @@ class _HarajListScreenState extends State<HarajListScreen> {
                             Text(J.str(post['title']), maxLines: 2),
                             Text(
                               money(post['price'], app.currency, app.decimals),
-                              style: TextStyle(color: app.brandColor),
+                              style: TextStyle(color: app.accentColor),
                             ),
                           ],
                         ),
@@ -281,7 +281,7 @@ class _HarajDetailsScreenState extends State<HarajDetailsScreen> {
           ),
           Text(
             money(post!['price'], app.currency, app.decimals),
-            style: TextStyle(color: app.brandColor, fontSize: 18),
+            style: TextStyle(color: app.accentColor, fontSize: 18),
           ),
           Text(J.str(post!['description'])),
           const Divider(),

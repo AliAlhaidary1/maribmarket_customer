@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import 'app.dart';
 import 'core/app_controller.dart';
+import 'core/app_theme.dart';
+import 'widgets/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +23,8 @@ class BootstrapApp extends StatefulWidget {
 class _BootstrapAppState extends State<BootstrapApp> {
   GoRouter? router;
   final apiUrl = TextEditingController();
+  bool _showSplash = true;
+  bool _bootstrapDone = false;
 
   @override
   void initState() {
@@ -40,11 +44,25 @@ class _BootstrapAppState extends State<BootstrapApp> {
     if (!mounted) return;
     final failed =
         appController.bootstrapError != null && appController.cities.isEmpty;
-    setState(() => router = failed ? null : buildRouter());
+    _bootstrapDone = true;
+    if (!failed) {
+      router = buildRouter();
+    }
+    setState(() {});
+    // Keep splash visible for animation duration
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    if (mounted) setState(() => _showSplash = false);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_showSplash || !_bootstrapDone) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: const BrandSplashScreen(),
+      );
+    }
+
     if (router == null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -55,14 +73,27 @@ class _BootstrapAppState extends State<BootstrapApp> {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
+        theme: AppTheme.build(locale: const Locale('ar')),
         home: Scaffold(
+          backgroundColor: AppTheme.primaryNavy,
           body: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                const Icon(
+                  Icons.wifi_off_outlined,
+                  color: AppTheme.accentOrange,
+                  size: 48,
+                ),
                 const SizedBox(height: 16),
-                const Text('مجمع مأرب'),
+                Text(
+                  AppTheme.brandNameAr,
+                  style: const TextStyle(
+                    color: AppTheme.backgroundWhite,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 if (appController.bootstrapError != null) ...[
                   const SizedBox(height: 16),
                   Padding(
@@ -70,6 +101,7 @@ class _BootstrapAppState extends State<BootstrapApp> {
                     child: Text(
                       appController.bootstrapError!,
                       textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppTheme.backgroundWhite),
                     ),
                   ),
                   if (kDebugMode) ...[
@@ -77,18 +109,33 @@ class _BootstrapAppState extends State<BootstrapApp> {
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: TextField(
                         controller: apiUrl,
-                        decoration: const InputDecoration(labelText: 'API URL'),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'API URL',
+                          labelStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
                   ],
-                  FilledButton(
-                    onPressed: () async {
-                      if (kDebugMode)
-                        await appController.setApiUrl(apiUrl.text);
-                      await _start();
-                    },
-                    child: const Text('إعادة المحاولة'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: BrandedButton(
+                      onPressed: () async {
+                        if (kDebugMode) {
+                          await appController.setApiUrl(apiUrl.text);
+                        }
+                        setState(() {
+                          _showSplash = true;
+                          _bootstrapDone = false;
+                          router = null;
+                        });
+                        await _start();
+                      },
+                      label: 'إعادة المحاولة',
+                    ),
                   ),
                 ],
               ],

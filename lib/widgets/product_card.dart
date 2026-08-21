@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_controller.dart';
+import '../core/app_theme.dart';
 import '../core/json_util.dart';
 import '../core/promo_price.dart';
 import 'app_image.dart';
@@ -43,12 +44,12 @@ class ProductCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Ink(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.backgroundWhite,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
+              color: AppTheme.primaryNavy.withValues(alpha: 0.08),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
@@ -75,13 +76,15 @@ class ProductCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: price.isFlash ? Colors.red : app.brandColor,
+                            color: price.isFlash
+                                ? const Color(0xFFDC2626)
+                                : AppTheme.accentOrange,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             '-${price.discountPercent}%',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppTheme.backgroundWhite,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -101,14 +104,17 @@ class ProductCard extends StatelessWidget {
                     name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
                   ),
                   if (seller.isNotEmpty)
                     Text(
                       seller,
                       maxLines: 1,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
                         fontSize: 11,
                       ),
                     ),
@@ -125,8 +131,8 @@ class ProductCard extends StatelessWidget {
                                 app.currency,
                                 app.decimals,
                               ),
-                              style: TextStyle(
-                                color: app.brandColor,
+                              style: const TextStyle(
+                                color: AppTheme.accentOrange,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -139,7 +145,7 @@ class ProductCard extends StatelessWidget {
                                 ),
                                 style: const TextStyle(
                                   decoration: TextDecoration.lineThrough,
-                                  color: Colors.grey,
+                                  color: AppTheme.textSecondary,
                                   fontSize: 11,
                                 ),
                               ),
@@ -147,13 +153,23 @@ class ProductCard extends StatelessWidget {
                         ),
                       ),
                       if (onAdd != null)
-                        IconButton.filled(
-                          onPressed: onAdd,
-                          style: IconButton.styleFrom(
-                            backgroundColor: app.brandColor,
-                            visualDensity: VisualDensity.compact,
+                        Material(
+                          color: AppTheme.accentOrange,
+                          borderRadius: BorderRadius.circular(10),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: onAdd,
+                            splashColor:
+                                AppTheme.backgroundWhite.withValues(alpha: 0.2),
+                            child: const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.add_shopping_cart,
+                                size: 18,
+                                color: AppTheme.backgroundWhite,
+                              ),
+                            ),
                           ),
-                          icon: const Icon(Icons.add_shopping_cart, size: 18),
                         ),
                     ],
                   ),
@@ -178,16 +194,35 @@ class SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
       child: Row(
         children: [
+          Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              color: AppTheme.accentOrange,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
             ),
           ),
           if (onSeeAll != null)
             TextButton(
               onPressed: onSeeAll,
-              child: Text(appController.t('see_all')),
+              child: Text(
+                appController.t('see_all'),
+                style: const TextStyle(
+                  color: AppTheme.accentOrange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
         ],
       ),

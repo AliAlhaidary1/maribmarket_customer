@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'city_mode.dart';
+import 'app_theme.dart';
 import 'config.dart';
 import 'i18n.dart';
 import 'json_util.dart';
@@ -49,13 +50,11 @@ class AppController extends ChangeNotifier {
   bool get maintenance => J.str(webSettings['website_mode']) == '1';
   bool get akhdimniEnabled => J.flag(settings['akhdimni_enabled']);
   Map<String, dynamic> get webSettings => J.map(settings['web_settings']);
-  Color get brandColor {
-    final hex = J
-        .str(webSettings['color'] ?? settings['color'], '#33A36B')
-        .replaceAll('#', '');
-    final value = int.tryParse(hex.padLeft(6, '0').substring(0, 6), radix: 16);
-    return Color(0xFF000000 | (value ?? AppConfig.defaultColor));
-  }
+  /// Deep Navy Blue — headers, navigation, primary structures.
+  Color get brandColor => AppTheme.primaryNavy;
+
+  /// Dynamic Orange — CTAs, badges, active states.
+  Color get accentColor => AppTheme.accentOrange;
 
   String get currency => J.str(settings['currency'], 'ر.ي');
   int get decimals => J.i(settings['decimal_point'], 2);

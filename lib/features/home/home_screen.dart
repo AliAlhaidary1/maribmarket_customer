@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_controller.dart';
+import '../../core/app_theme.dart';
 import '../../core/json_util.dart';
 import '../../core/promo_price.dart';
 import '../../widgets/app_image.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/skeleton_loader.dart';
 import '../more/more_screens.dart';
 import '../products/categories_screen.dart';
 
@@ -154,29 +156,10 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: TextField(
-                readOnly: true,
-                onTap: () => context.push('/search'),
-                decoration: InputDecoration(
-                  hintText: app.t('i_am_looking_for'),
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ),
-          ),
           if (app.city == null)
             SliverToBoxAdapter(
               child: ListTile(
-                leading: Icon(Icons.location_on, color: app.brandColor),
+                leading: Icon(Icons.location_on, color: app.accentColor),
                 title: Text(app.t('choose_city_to_browse')),
                 trailing: const Icon(Icons.chevron_left),
                 onTap: () => showModalBottomSheet(
@@ -203,12 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           if (loading && !hasContent)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.all(48),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
+            const SliverToBoxAdapter(child: HomeLoadingSkeleton()),
           if (topOffers.isNotEmpty) _bannerPage(topOffers, 140),
           if (sliders.isNotEmpty) _bannerPage(sliders, 170),
           if (belowSlider.isNotEmpty) _bannerPage(belowSlider, 140),
@@ -237,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             CircleAvatar(
                               radius: 34,
-                              backgroundColor: Colors.white,
+                              backgroundColor: AppTheme.surfaceGrey,
                               child: ClipOval(
                                 child: AppImage(
                                   J.str(cat['image_url'] ?? cat['image']),
@@ -310,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             CircleAvatar(
                               radius: 32,
-                              backgroundColor: Colors.white,
+                              backgroundColor: AppTheme.surfaceGrey,
                               child: ClipOval(
                                 child: SizedBox(
                                   width: 64,
@@ -380,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               money(post['price'], app.currency, app.decimals),
                               style: TextStyle(
-                                color: app.brandColor,
+                                color: app.accentColor,
                                 fontSize: 12,
                               ),
                             ),
@@ -398,11 +376,11 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: ListTile(
-                  tileColor: app.brandColor.withValues(alpha: 0.1),
+                  tileColor: app.accentColor.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  leading: Icon(Icons.delivery_dining, color: app.brandColor),
+                  leading: Icon(Icons.delivery_dining, color: app.accentColor),
                   title: const Text('أخدمني'),
                   subtitle: const Text(
                     'اطلب خدمة من نقطة إلى نقطة أو أغراض خاصة',
@@ -450,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Icon(
                         Icons.storefront_outlined,
                         size: 64,
-                        color: app.brandColor,
+                        color: app.accentColor,
                       ),
                       const SizedBox(height: 12),
                       Text(

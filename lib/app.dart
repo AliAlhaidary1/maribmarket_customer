@@ -3,7 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/app_controller.dart';
+import 'core/app_theme.dart';
 import 'core/json_util.dart';
+import 'features/account/account_screens.dart';
 import 'features/assistant/assistant_screen.dart';
 import 'features/auth/auth_screens.dart';
 import 'features/cart/cart_screens.dart';
@@ -19,146 +21,289 @@ GoRouter buildRouter() {
     initialLocation: '/',
     refreshListenable: appController,
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/login',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const LoginScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/register',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const RegisterScreen(),
+        ),
+      ),
       GoRoute(
         path: '/product/:slug',
-        builder: (_, state) =>
-            ProductDetailsScreen(slug: state.pathParameters['slug']!),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: ProductDetailsScreen(slug: state.pathParameters['slug']!),
+        ),
       ),
-      GoRoute(path: '/checkout', builder: (_, __) => const CheckoutScreen()),
-      GoRoute(path: '/orders', builder: (_, __) => const OrdersScreen()),
+      GoRoute(
+        path: '/checkout',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const CheckoutScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/orders',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const OrdersScreen(),
+        ),
+      ),
       GoRoute(
         path: '/orders/:id',
-        builder: (_, state) =>
-            OrderDetailsScreen(id: state.pathParameters['id']!),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: OrderDetailsScreen(id: state.pathParameters['id']!),
+        ),
       ),
-      GoRoute(path: '/wishlist', builder: (_, __) => const WishlistScreen()),
-      GoRoute(path: '/addresses', builder: (_, __) => const AddressesScreen()),
-      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+      GoRoute(
+        path: '/wishlist',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const WishlistScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/addresses',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const AddressesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/profile',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const ProfileScreen(),
+        ),
+      ),
       GoRoute(
         path: '/notifications',
-        builder: (_, __) => SimpleListScreen(
-          title: appController.t('notification'),
-          loader: () async =>
-              (await appController.api.notifications()).dataMaps,
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: SimpleListScreen(
+            title: appController.t('notification'),
+            loader: () async =>
+                (await appController.api.notifications()).dataMaps,
+          ),
         ),
       ),
       GoRoute(
         path: '/wallet',
-        builder: (_, __) => SimpleListScreen(
-          title: appController.t('wallet'),
-          loader: () async =>
-              (await appController.api.transactions(type: 'wallet')).dataMaps,
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: SimpleListScreen(
+            title: appController.t('wallet'),
+            loader: () async =>
+                (await appController.api.transactions(type: 'wallet')).dataMaps,
+          ),
         ),
       ),
       GoRoute(
         path: '/transactions',
-        builder: (_, __) => SimpleListScreen(
-          title: appController.t('transactions'),
-          loader: () async => (await appController.api.transactions()).dataMaps,
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: SimpleListScreen(
+            title: appController.t('transactions'),
+            loader: () async => (await appController.api.transactions()).dataMaps,
+          ),
         ),
       ),
       GoRoute(
         path: '/sellers',
-        builder: (_, state) => SellersScreen(
-          typeId: state.uri.queryParameters['type'] ??
-              state.uri.queryParameters['category'],
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: SellersScreen(
+            typeId: state.uri.queryParameters['type'] ??
+                state.uri.queryParameters['category'],
+          ),
         ),
       ),
       GoRoute(
         path: '/seller/:id',
-        builder: (_, state) => SellerPageScreen(id: state.pathParameters['id']),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: SellerPageScreen(id: state.pathParameters['id']),
+        ),
       ),
       GoRoute(
         path: '/store/:slug',
-        builder: (_, state) =>
-            SellerPageScreen(slug: state.pathParameters['slug']),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: SellerPageScreen(slug: state.pathParameters['slug']),
+        ),
       ),
-      GoRoute(path: '/offers', builder: (_, __) => const OffersScreen()),
-      GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
+      GoRoute(
+        path: '/offers',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const OffersScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/search',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const SearchScreen(),
+        ),
+      ),
       GoRoute(
         path: '/category/:slug',
-        builder: (_, state) =>
-            CategoriesScreen(slug: state.pathParameters['slug'] ?? 'all'),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: CategoriesScreen(slug: state.pathParameters['slug'] ?? 'all'),
+        ),
       ),
       GoRoute(
         path: '/akhdimni/orders/:id',
-        builder: (_, state) =>
-            AkhdimniOrderDetailsScreen(id: state.pathParameters['id']!),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: AkhdimniOrderDetailsScreen(id: state.pathParameters['id']!),
+        ),
       ),
-      GoRoute(path: '/haraj', builder: (_, __) => const HarajListScreen()),
+      GoRoute(
+        path: '/haraj',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const HarajListScreen(),
+        ),
+      ),
       GoRoute(
         path: '/haraj/mine',
-        builder: (_, __) => const HarajListScreen(mine: true),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const HarajListScreen(mine: true),
+        ),
       ),
       GoRoute(
         path: '/haraj/create',
-        builder: (_, __) => const HarajCreateScreen(),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const HarajCreateScreen(),
+        ),
       ),
       GoRoute(
         path: '/haraj/:id',
-        builder: (_, state) =>
-            HarajDetailsScreen(id: state.pathParameters['id']!),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: HarajDetailsScreen(id: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/akhdimni',
-        builder: (_, __) => const AkhdimniHomeScreen(),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const AkhdimniHomeScreen(),
+        ),
       ),
       GoRoute(
         path: '/akhdimni/create',
-        builder: (_, state) => AkhdimniCreateScreen(
-          type: state.uri.queryParameters['type'] ?? 'point_to_point',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: AkhdimniCreateScreen(
+            type: state.uri.queryParameters['type'] ?? 'point_to_point',
+          ),
         ),
       ),
       GoRoute(
         path: '/akhdimni/orders',
-        builder: (_, __) => const AkhdimniOrdersScreen(),
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const AkhdimniOrdersScreen(),
+        ),
       ),
       GoRoute(
         path: '/privacy',
-        builder: (_, __) => CmsScreen(
-          title: appController.t('privacy_policy'),
-          settingKey: 'privacy_policy',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: CmsScreen(
+            title: appController.t('privacy_policy'),
+            settingKey: 'privacy_policy',
+          ),
         ),
       ),
       GoRoute(
         path: '/terms',
-        builder: (_, __) => CmsScreen(
-          title: appController.t('terms_of_service'),
-          settingKey: 'terms_conditions',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: CmsScreen(
+            title: appController.t('terms_of_service'),
+            settingKey: 'terms_conditions',
+          ),
         ),
       ),
       GoRoute(
         path: '/about',
-        builder: (_, __) => CmsScreen(
-          title: appController.t('about_us'),
-          settingKey: 'about_us',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: CmsScreen(
+            title: appController.t('about_us'),
+            settingKey: 'about_us',
+          ),
         ),
       ),
-      GoRoute(path: '/contact', builder: (_, __) => CmsScreen(
-          title: appController.t('contact_us'),
-          settingKey: 'contact_us',
+      GoRoute(
+        path: '/contact',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: CmsScreen(
+            title: appController.t('contact_us'),
+            settingKey: 'contact_us',
+          ),
         ),
       ),
-      GoRoute(path: '/assistant', builder: (_, __) => const AssistantScreen()),
+      GoRoute(
+        path: '/assistant',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: const AssistantScreen(),
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) =>
             AppShell(location: state.uri.path, child: child),
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
           GoRoute(
-            path: '/products',
-            builder: (_, state) => ProductsScreen(
-              categoryId: state.uri.queryParameters['category'],
-              search: state.uri.queryParameters['search'],
-              hasOffer: state.uri.queryParameters['offer'] == '1',
-              sectionId: state.uri.queryParameters['section'],
-              sellerId: state.uri.queryParameters['seller'],
+            path: '/',
+            pageBuilder: (_, state) => AppTheme.slidePage(
+              key: state.pageKey,
+              child: const HomeScreen(),
             ),
           ),
-          GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
-          GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+          GoRoute(
+            path: '/products',
+            pageBuilder: (_, state) => AppTheme.slidePage(
+              key: state.pageKey,
+              child: ProductsScreen(
+                categoryId: state.uri.queryParameters['category'],
+                search: state.uri.queryParameters['search'],
+                hasOffer: state.uri.queryParameters['offer'] == '1',
+                sectionId: state.uri.queryParameters['section'],
+                sellerId: state.uri.queryParameters['seller'],
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/cart',
+            pageBuilder: (_, state) => AppTheme.slidePage(
+              key: state.pageKey,
+              child: const CartScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/account',
+            pageBuilder: (_, state) => AppTheme.slidePage(
+              key: state.pageKey,
+              child: const AccountScreen(),
+            ),
+          ),
         ],
       ),
     ],
@@ -177,6 +322,12 @@ class AppShell extends StatelessWidget {
     return 0;
   }
 
+  String _brandTitle() {
+    final fromApi = J.str(appController.webSettings['site_title']);
+    if (fromApi.isNotEmpty) return fromApi;
+    return AppTheme.brandNameAr;
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = appController;
@@ -189,44 +340,12 @@ class AppShell extends StatelessWidget {
       );
     }
     return Scaffold(
-      appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Image.asset(
-            'assets/brand/logo.webp',
-            errorBuilder: (_, __, ___) => const Icon(Icons.storefront),
-          ),
-        ),
-        title: Text(J.str(app.webSettings['site_title'], 'مجمع مأرب')),
-        actions: [
-          TextButton.icon(
-            onPressed: app.cities.isEmpty
-                ? null
-                : () => showModalBottomSheet(
-                    context: context,
-                    builder: (_) => const CityPickerSheet(),
-                  ),
-            icon: const Icon(Icons.location_on_outlined, color: Colors.white),
-            label: Text(
-              J.str(app.city?['name'], app.t('city')),
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-          IconButton(
-            onPressed: () => context.push('/sellers'),
-            icon: const Icon(Icons.category_outlined),
-          ),
-          IconButton(
-            onPressed: () => context.push('/offers'),
-            icon: const Icon(Icons.local_offer_outlined),
-          ),
-          IconButton(
-            onPressed: () => context.push('/haraj'),
-            icon: const Icon(Icons.campaign_outlined),
-          ),
+      body: Column(
+        children: [
+          _BrandHeader(app: app, title: _brandTitle()),
+          Expanded(child: child),
         ],
       ),
-      body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (i) {
@@ -253,12 +372,8 @@ class AppShell extends StatelessWidget {
             label: app.t('products'),
           ),
           NavigationDestination(
-            icon: Badge(
-              isLabelVisible: app.cartCount > 0,
-              label: Text('${app.cartCount}'),
-              child: const Icon(Icons.shopping_cart_outlined),
-            ),
-            selectedIcon: const Icon(Icons.shopping_cart),
+            icon: _AnimatedCartBadge(count: app.cartCount, selected: false),
+            selectedIcon: _AnimatedCartBadge(count: app.cartCount, selected: true),
             label: app.t('cart'),
           ),
           NavigationDestination(
@@ -267,6 +382,249 @@ class AppShell extends StatelessWidget {
             label: app.t('my_account'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BrandHeader extends StatelessWidget {
+  const _BrandHeader({required this.app, required this.title});
+  final AppController app;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = app.rootCategories.isNotEmpty
+        ? app.rootCategories
+        : J.maps(app.shop?['categories']);
+
+    return Container(
+      color: AppTheme.primaryNavy,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/brand/saree.png',
+                      width: 36,
+                      height: 36,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.shopping_cart_rounded,
+                        color: AppTheme.accentOrange,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppTheme.backgroundWhite,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  // Location pin
+                  InkWell(
+                    onTap: app.cities.isEmpty
+                        ? null
+                        : () => showModalBottomSheet(
+                            context: context,
+                            builder: (_) => const CityPickerSheet(),
+                          ),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            color: AppTheme.accentOrange,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              J.str(app.city?['name'], app.t('city')),
+                              style: const TextStyle(
+                                color: AppTheme.backgroundWhite,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Notification bell with orange badge
+                  IconButton(
+                    onPressed: () => context.push('/notifications'),
+                    icon: Badge(
+                      isLabelVisible: true,
+                      backgroundColor: AppTheme.accentOrange,
+                      label: const Text(
+                        '!',
+                        style: TextStyle(fontSize: 10, color: Colors.white),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_outlined,
+                        color: AppTheme.backgroundWhite,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => context.push('/sellers'),
+                    icon: const Icon(
+                      Icons.storefront_outlined,
+                      color: AppTheme.backgroundWhite,
+                    ),
+                    tooltip: app.t('sellers'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Search bar
+              GestureDetector(
+                onTap: () => context.push('/search'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppTheme.backgroundWhite,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.search,
+                        color: AppTheme.primaryNavy.withValues(alpha: 0.5),
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          app.t('i_am_looking_for'),
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (categories.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentOrange.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.filter_list,
+                                size: 14,
+                                color: AppTheme.accentOrange,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                app.t('categories') == 'categories'
+                                    ? 'فئات'
+                                    : app.t('categories'),
+                                style: const TextStyle(
+                                  color: AppTheme.accentOrange,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedCartBadge extends StatefulWidget {
+  const _AnimatedCartBadge({required this.count, required this.selected});
+  final int count;
+  final bool selected;
+
+  @override
+  State<_AnimatedCartBadge> createState() => _AnimatedCartBadgeState();
+}
+
+class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedCartBadge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.count != oldWidget.count && widget.count > 0) {
+      _pulse.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: Tween<double>(begin: 1, end: 1.25).animate(
+        CurvedAnimation(parent: _pulse, curve: Curves.elasticOut),
+      ),
+      child: Badge(
+        isLabelVisible: widget.count > 0,
+        backgroundColor: AppTheme.accentOrange,
+        label: Text(
+          '${widget.count}',
+          style: const TextStyle(fontSize: 10, color: Colors.white),
+        ),
+        child: Icon(
+          widget.selected
+              ? Icons.shopping_cart
+              : Icons.shopping_cart_outlined,
+        ),
       ),
     );
   }
@@ -281,11 +639,14 @@ class MaribCustomerApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: appController,
       builder: (context, _) {
-        final color = appController.brandColor;
+        final locale = appController.i18n.locale;
         return MaterialApp.router(
-          title: J.str(appController.webSettings['site_title'], 'مجمع مأرب'),
+          title: J.str(
+            appController.webSettings['site_title'],
+            AppTheme.brandNameAr,
+          ),
           debugShowCheckedModeBanner: false,
-          locale: appController.i18n.locale,
+          locale: locale,
           supportedLocales: const [Locale('ar'), Locale('en')],
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
@@ -297,33 +658,7 @@ class MaribCustomerApp extends StatelessWidget {
             textDirection: appController.i18n.direction,
             child: child ?? const SizedBox.shrink(),
           ),
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(seedColor: color, primary: color),
-            scaffoldBackgroundColor: const Color(0xFFF3F5F7),
-            appBarTheme: AppBarTheme(
-              backgroundColor: color,
-              foregroundColor: Colors.white,
-              centerTitle: true,
-            ),
-            navigationBarTheme: NavigationBarThemeData(
-              indicatorColor: color.withValues(alpha: 0.18),
-              iconTheme: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected))
-                  return IconThemeData(color: color);
-                return const IconThemeData();
-              }),
-            ),
-            filledButtonTheme: FilledButtonThemeData(
-              style: FilledButton.styleFrom(
-                backgroundColor: color,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
+          theme: AppTheme.build(locale: locale),
         );
       },
     );

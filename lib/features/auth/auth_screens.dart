@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_controller.dart';
+import '../../core/app_theme.dart';
 import '../../core/config.dart';
 import '../../widgets/ui_helpers.dart';
 
@@ -41,16 +42,38 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           Image.asset(
-            'assets/brand/logo.webp',
+            'assets/brand/saree.png',
             height: 88,
-            errorBuilder: (_, __, ___) =>
-                Icon(Icons.storefront, size: 64, color: app.brandColor),
+            errorBuilder: (_, __, ___) => Image.asset(
+              'assets/brand/saree.png',
+              width: 64,
+              height: 64,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.shopping_cart_rounded,
+                size: 64,
+                color: app.accentColor,
+              ),
+            ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'مجمع مأرب',
+          Text(
+            AppTheme.brandNameAr,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          Text(
+            AppTheme.brandNameEn,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.accentOrange,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 20),
           TextField(
