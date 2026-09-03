@@ -14,7 +14,7 @@ if (hasReleaseKeystore) {
 }
 
 android {
-    namespace = "com.maribmarket.maribmarket_customer"
+    namespace = "com.saree.saree_customer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.maribmarket.maribmarket_customer"
+        applicationId = "com.saree.saree_customer"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

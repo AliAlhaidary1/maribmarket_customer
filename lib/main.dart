@@ -145,6 +145,6 @@ class _BootstrapAppState extends State<BootstrapApp> {
         ),
       );
     }
-    return MaribCustomerApp(router: router!);
+    return SareeCustomerApp(router: router!);
   }
 }

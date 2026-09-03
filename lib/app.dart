@@ -674,8 +674,8 @@ class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
   }
 }
 
-class MaribCustomerApp extends StatelessWidget {
-  const MaribCustomerApp({super.key, required this.router});
+class SareeCustomerApp extends StatelessWidget {
+  const SareeCustomerApp({super.key, required this.router});
   final GoRouter router;
 
   @override
