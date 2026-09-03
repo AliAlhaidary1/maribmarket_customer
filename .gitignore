@@ -43,3 +43,18 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/build
+/android/build
+
+# Signing — never commit these (حماية مفتاح الرفع)
+android/key.properties
+key.properties
+**/*.keystore
+**/*.jks
+*.jks
+*.keystore
+upload-keystore.jks
+
+# Secrets / local environment
+.env
+.env.*
