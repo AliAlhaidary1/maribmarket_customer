@@ -6,10 +6,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'city_mode.dart';
 import 'app_theme.dart';
+import 'business_hours.dart';
+import 'checkout_models.dart';
 import 'config.dart';
 import 'i18n.dart';
 import 'json_util.dart';
 import 'api/customer_api.dart';
+import 'brand/brand_config.dart';
+import 'brand/brand_service.dart';
 
 class AppController extends ChangeNotifier {
   AppController();
@@ -44,6 +48,20 @@ class AppController extends ChangeNotifier {
   bool bootstrapped = false;
   String? bootstrapError;
   bool busy = false;
+  BrandConfig brand = BrandConfig.defaults;
+
+  // === Checkout parity with front ===
+  CheckoutConfig checkoutConfig = CheckoutConfig.defaults();
+  MultiSellerCheckout? multiSellerCheckout;
+  BusinessHoursResult? businessHours;
+  List<TimeSlot> timeSlots = [];
+  List<Map<String, dynamic>> checkoutGroups = [];
+  List<Map<String, dynamic>> sellerGroups = [];
+  Map<String, dynamic> deliveryFees = {};
+  List<Map<String, dynamic>> paymentSplit = [];
+  double platformFee = 0;
+  // wallet/promo parity
+  bool isWalletChecked = false;
 
   bool get isLoggedIn => token != null && token!.isNotEmpty;
   bool get isGuest => !isLoggedIn;
@@ -51,10 +69,10 @@ class AppController extends ChangeNotifier {
   bool get akhdimniEnabled => J.flag(settings['akhdimni_enabled']);
   Map<String, dynamic> get webSettings => J.map(settings['web_settings']);
   /// Deep Navy Blue — headers, navigation, primary structures.
-  Color get brandColor => AppTheme.primaryNavy;
+  Color get brandColor => brand.primary;
 
   /// Dynamic Orange — CTAs, badges, active states.
-  Color get accentColor => AppTheme.accentOrange;
+  Color get accentColor => brand.accent;
 
   String get currency => J.str(settings['currency'], 'ر.ي');
   int get decimals => J.i(settings['decimal_point'], 2);
@@ -90,6 +108,7 @@ class AppController extends ChangeNotifier {
 
     api = CustomerApi(baseUrl: apiUrl, token: token, viewerKey: viewerKey);
     try {
+      brand = await BrandService(apiUrl).load(prefs: _prefs);
       if (token != null) {
         final me = await api.userDetails();
         if (me.ok) {
@@ -223,6 +242,78 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---- Front parity: checkout config / business hours / time slots ----
+  Future<void> loadCheckoutConfig() async {
+    final res = await api.checkoutConfig();
+    if (res.ok) checkoutConfig = CheckoutConfig.from(res);
+    notifyListeners();
+  }
+
+  Future<void> loadBusinessHours({List<dynamic> sellerIds = const []}) async {
+    final ids = sellerIds.isNotEmpty ? sellerIds : _sellerIdsFromCart();
+    final res = await api.businessHours(sellerIds: ids);
+    if (res.ok) businessHours = BusinessHoursResult.from(res);
+    notifyListeners();
+  }
+
+  List<dynamic> _sellerIdsFromCart() {
+    final ids = <dynamic>{};
+    for (final p in cartProducts) {
+      final sid = J.sellerId(p) ?? p['seller_id'];
+      if (sid != null) ids.add(sid);
+    }
+    for (final p in guestCart) {
+      final sid = p['seller_id'];
+      if (sid != null) ids.add(sid);
+    }
+    return ids.toList();
+  }
+
+  Future<void> loadTimeSlots() async {
+    final res = await api.timeSlots();
+    if (res.ok) timeSlots = TimeSlot.parse(res);
+    notifyListeners();
+  }
+
+  Future<ApiResult> loadMultiSellerCheckout() async {
+    final pt = browseCoords;
+    final ids = _sellerIdsFromCart();
+    final res = await api.multiSellerCheckout(
+      latitude: pt.latitude,
+      longitude: pt.longitude,
+      sellerIds: ids,
+    );
+    if (res.ok) {
+      multiSellerCheckout = MultiSellerCheckout.from(res);
+      final data = res.dataMap;
+      sellerGroups = J.maps(data['seller_groups'] ?? data['sellerGroups']);
+      deliveryFees = J.map(data['delivery_fees'] ?? data['deliveryFees']);
+      paymentSplit = J.maps(data['payment_split'] ?? data['paymentSplit']);
+      platformFee = J.d(data['platform_fee']);
+      // keep cart checkout mapping parity
+      cart = data.isNotEmpty ? data : cart;
+    }
+    notifyListeners();
+    return res;
+  }
+
+  Future<ApiResult> loadCheckoutGroups({int page = 1}) async {
+    final res = await api.checkoutGroups(page: page);
+    if (res.ok) checkoutGroups = res.dataMaps;
+    notifyListeners();
+    return res;
+  }
+
+  Future<ApiResult> fetchCheckoutGroup(dynamic id) => api.checkoutGroup(id);
+  Future<ApiResult> cancelCheckoutGroup(dynamic id, {String reason = ''}) => api.cancelCheckoutGroup(id, reason: reason);
+
+  String buildIdempotencyKey() {
+    final uid = user?['id'] ?? 'guest';
+    return 'checkout-$uid-${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  CanPlaceOrderResult canPlaceOrder() => canPlaceOrderFromBusinessHours(businessHours);
+
   Future<void> loadAddresses() async {
     if (!isLoggedIn) return;
     final result = await api.addresses();
@@ -252,12 +343,16 @@ class AppController extends ChangeNotifier {
     required String mobile,
     required String password,
     String email = '',
+    String? otp,
+    int? cityId,
   }) async {
     final result = await api.register(
       name: name,
       mobile: mobile,
       password: password,
       email: email,
+      otp: otp,
+      cityId: cityId,
     );
     if (!result.ok) return result.message;
     await _applyAuth(result);
@@ -323,6 +418,20 @@ class AppController extends ChangeNotifier {
         cart = result.dataMap;
         cartProducts = J.maps(cart?['cart'] ?? cart?['items'] ?? result.data);
         cartSubTotal = J.d(cart?['sub_total'] ?? cart?['total']);
+        // parity: enrich sellerGroups etc when is_checkout=1
+        if (checkout == 1) {
+          sellerGroups = J.maps(cart?['seller_groups'] ?? cart?['sellerGroups']);
+          deliveryFees = J.map(cart?['delivery_fees'] ?? cart?['deliveryFees']);
+          paymentSplit = J.maps(cart?['payment_split'] ?? cart?['paymentSplit']);
+          platformFee = J.d(cart?['platform_fee']);
+          isWalletChecked = J.i(cart?['is_wallet_checked']) == 1;
+        }
+        // auto load supporting data for checkout
+        if (checkout == 1) {
+          await loadBusinessHours();
+          if (timeSlots.isEmpty) await loadTimeSlots();
+          if (checkoutConfig.maxSellersPerCheckout == 5) await loadCheckoutConfig();
+        }
       }
       notifyListeners();
       return result;
@@ -480,13 +589,31 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> deleteAccount() async {
-    final uid = J.str(user?['auth_uid'] ?? user?['id']);
-    final result = await api.deleteAccount(uid);
-    if (!result.ok)
+  Future<String?> deleteAccount({
+    required String confirmation,
+    String? password,
+  }) async {
+    final result = await api.deleteAccount(
+      confirmation: confirmation,
+      password: password,
+    );
+    if (!result.ok) {
       return result.message.isEmpty
           ? t('something_went_wrong')
           : result.message;
+    }
+    await _clearSession();
+    notifyListeners();
+    return null;
+  }
+
+  Future<String?> logoutAllDevices() async {
+    final result = await api.logoutAllDevices();
+    if (!result.ok) {
+      return result.message.isEmpty
+          ? t('something_went_wrong')
+          : result.message;
+    }
     await _clearSession();
     notifyListeners();
     return null;

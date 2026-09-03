@@ -58,11 +58,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.dispose();
   }
 
+  // parity with front productFilterReducer + getProductbyFilter
+  String priceMin='';
+  String priceMax='';
+  String brandIds='';
+  String minRating='';
+  bool canDeliver=false;
+  bool isHome=false;
+
   Map<String, dynamic> get _filters => {
     'limit': AppConfig.productPageSize,
     'offset': offset,
     if (categoryId != null && categoryId!.isNotEmpty)
       'category_ids': categoryId,
+    if (brandIds.isNotEmpty) 'brand_ids': brandIds,
     if (widget.sellerId != null) 'seller_id': widget.sellerId,
     if (widget.sectionId != null && widget.sectionId!.isNotEmpty)
       'section_id': widget.sectionId,
@@ -72,6 +81,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
     if (sort.isNotEmpty) 'sort': sort,
     if (inStock) 'in_stock': 1,
     if (widget.hasOffer || onlyOffers) 'has_offer': 1,
+    if (priceMin.isNotEmpty) 'price_min': priceMin,
+    if (priceMax.isNotEmpty) 'price_max': priceMax,
+    if (minRating.isNotEmpty) 'min_seller_rating': minRating,
+    if (canDeliver) 'can_deliver': 1,
+    if (isHome) 'is_home_product': 1,
+    'latitude': appController.browseCoords.latitude,
+    'longitude': appController.browseCoords.longitude,
   };
 
   Future<void> _load({bool reset = false}) async {
@@ -177,14 +193,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     }
                     return false;
                   },
-                  child: GridView.builder(
+                  child: LayoutBuilder(builder: (ctx, c){
+                    final count = c.maxWidth >= 900 ? 4 : c.maxWidth >= 600 ? 3 : 2;
+                    final aspect = c.maxWidth >= 600 ? 0.68 : 0.62;
+                    return GridView.builder(
                     padding: const EdgeInsets.all(16),
                     gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
+                        SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: count,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
-                          childAspectRatio: 0.62,
+                          childAspectRatio: aspect,
                         ),
                     itemCount: items.length + (loadingMore ? 1 : 0),
                     itemBuilder: (_, i) {
@@ -203,7 +222,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         },
                       );
                     },
-                  ),
+                  );}),
                 ),
         ),
       ],
@@ -213,60 +232,55 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Future<void> _openFilters() async {
     final selected = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) {
         var localSort = sort;
         var stock = inStock;
         var offer = onlyOffers;
+        var pMin = priceMin;
+        var pMax = priceMax;
+        var deliver = canDeliver;
         return StatefulBuilder(
           builder: (context, setModal) => Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  appController.t('filters'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    appController.t('filters'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
-                ),
-                RadioListTile(
-                  title: Text(appController.t('low_to_high')),
-                  value: 'low',
-                  groupValue: localSort,
-                  onChanged: (v) => setModal(() => localSort = v ?? ''),
-                ),
-                RadioListTile(
-                  title: Text(appController.t('high_to_low')),
-                  value: 'high',
-                  groupValue: localSort,
-                  onChanged: (v) => setModal(() => localSort = v ?? ''),
-                ),
-                RadioListTile(
-                  title: Text(appController.t('newest_first')),
-                  value: 'new',
-                  groupValue: localSort,
-                  onChanged: (v) => setModal(() => localSort = v ?? ''),
-                ),
-                SwitchListTile(
-                  title: const Text('المتوفر فقط'),
-                  value: stock,
-                  onChanged: (v) => setModal(() => stock = v),
-                ),
-                SwitchListTile(
-                  title: Text(appController.t('offers')),
-                  value: offer,
-                  onChanged: (v) => setModal(() => offer = v),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, {
-                    'sort': localSort,
-                    'stock': stock,
-                    'offer': offer,
-                  }),
-                  child: Text(appController.t('apply')),
-                ),
-              ],
+                  RadioListTile(title: Text(appController.t('low_to_high')), value: 'low', groupValue: localSort, onChanged: (v) => setModal(() => localSort = v ?? '')),
+                  RadioListTile(title: Text(appController.t('high_to_low')), value: 'high', groupValue: localSort, onChanged: (v) => setModal(() => localSort = v ?? '')),
+                  RadioListTile(title: Text(appController.t('newest_first')), value: 'new', groupValue: localSort, onChanged: (v) => setModal(() => localSort = v ?? '')),
+                  RadioListTile(title: const Text('الأكثر خصماً'), value: 'discount', groupValue: localSort, onChanged: (v) => setModal(() => localSort = v ?? '')),
+                  RadioListTile(title: const Text('الأكثر شهرة'), value: 'popular', groupValue: localSort, onChanged: (v) => setModal(() => localSort = v ?? '')),
+                  Row(children: [
+                    Expanded(child: TextField(decoration: const InputDecoration(labelText: 'من سعر'), keyboardType: TextInputType.number, onChanged: (v)=> pMin=v, controller: TextEditingController(text: pMin))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(decoration: const InputDecoration(labelText: 'إلى سعر'), keyboardType: TextInputType.number, onChanged: (v)=> pMax=v, controller: TextEditingController(text: pMax))),
+                  ]),
+                  SwitchListTile(title: const Text('المتوفر فقط'), value: stock, onChanged: (v) => setModal(() => stock = v)),
+                  SwitchListTile(title: Text(appController.t('offers')), value: offer, onChanged: (v) => setModal(() => offer = v)),
+                  SwitchListTile(title: const Text('قابل للتوصيل'), value: deliver, onChanged: (v)=> setModal(()=> deliver=v)),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, {
+                      'sort': localSort,
+                      'stock': stock,
+                      'offer': offer,
+                      'pMin': pMin,
+                      'pMax': pMax,
+                      'deliver': deliver,
+                    }),
+                    child: Text(appController.t('apply')),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -276,6 +290,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
       sort = selected['sort'] ?? '';
       inStock = selected['stock'] == true;
       onlyOffers = selected['offer'] == true;
+      priceMin = selected['pMin'] ?? '';
+      priceMax = selected['pMax'] ?? '';
+      canDeliver = selected['deliver'] == true;
       _load(reset: true);
     }
   }

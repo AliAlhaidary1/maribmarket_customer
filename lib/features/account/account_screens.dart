@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,7 @@ import '../../core/json_util.dart';
 import '../../core/promo_price.dart';
 import '../../widgets/app_image.dart';
 import '../../core/app_theme.dart';
+import '../../widgets/dynamic_address_fields.dart';
 import '../../widgets/order_tracker.dart';
 import '../../widgets/ui_helpers.dart';
 
@@ -193,11 +196,34 @@ class AccountScreen extends StatelessWidget {
 
   Future<void> _confirmDelete(BuildContext context) async {
     final app = appController;
+    final confirmationController = TextEditingController();
+    final passwordController = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(app.t('delete_account')),
-        content: Text(app.t('delete_user_message')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(app.t('delete_user_message')),
+            const SizedBox(height: 12),
+            TextField(
+              controller: confirmationController,
+              decoration: InputDecoration(
+                labelText: 'DELETE',
+                hintText: 'DELETE',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: app.t('password'),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -212,7 +238,12 @@ class AccountScreen extends StatelessWidget {
       ),
     );
     if (ok != true || !context.mounted) return;
-    final error = await app.deleteAccount();
+    final error = await app.deleteAccount(
+      confirmation: confirmationController.text.trim(),
+      password: passwordController.text.trim().isEmpty
+          ? null
+          : passwordController.text.trim(),
+    );
     if (!context.mounted) return;
     if (error != null) {
       ScaffoldMessenger.of(
@@ -459,7 +490,12 @@ class _AddressesScreenState extends State<AddressesScreen> {
                     value: '${address['id']}',
                     groupValue: '${app.selectedAddress?['id']}',
                     title: Text(J.str(address['type'] ?? address['name'])),
-                    subtitle: Text(J.str(address['address'])),
+                    subtitle: Text(
+                      [
+                        J.str(address['address']),
+                        J.str(address['custom_fields_display']),
+                      ].where((part) => part.isNotEmpty).join(' | '),
+                    ),
                     onChanged: (_) {
                       app.selectAddress(address);
                       final next = cityFromAddress(address, app.cities);
@@ -492,37 +528,63 @@ class _AddressesScreenState extends State<AddressesScreen> {
     final mobile = TextEditingController(text: J.str(app.user?['mobile']));
     final address = TextEditingController();
     final city = app.city;
+    final cityId = int.tryParse('${city?['id']}');
+    List<Map<String, dynamic>> dynamicFields = [];
+    Map<String, dynamic> customFields = {};
+    if (cityId != null) {
+      final configResult = await app.api.cityConfig(cityId: cityId);
+      if (configResult.ok) {
+        final config = J.map(configResult.dataMap['data']);
+        final rawFields = config['address_fields'];
+        if (rawFields is List) {
+          dynamicFields = rawFields.map((item) => J.map(item)).toList();
+        }
+      }
+    }
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(app.t('new_address')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              decoration: InputDecoration(labelText: app.t('Name')),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Text(app.t('new_address')),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: name,
+                    decoration: InputDecoration(labelText: app.t('Name')),
+                  ),
+                  TextField(
+                    controller: mobile,
+                    decoration: InputDecoration(labelText: app.t('mobile')),
+                  ),
+                  TextField(
+                    controller: address,
+                    decoration: InputDecoration(labelText: app.t('address')),
+                  ),
+                  DynamicAddressFields(
+                    fields: dynamicFields,
+                    values: customFields,
+                    onChanged: (values) {
+                      customFields = values;
+                    },
+                  ),
+                ],
+              ),
             ),
-            TextField(
-              controller: mobile,
-              decoration: InputDecoration(labelText: app.t('mobile')),
-            ),
-            TextField(
-              controller: address,
-              decoration: InputDecoration(labelText: app.t('address')),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(app.t('cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(app.t('save_info')),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(app.t('cancel')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(app.t('save_info')),
+              ),
+            ],
+          );
+        },
       ),
     );
     if (ok != true) return;
@@ -548,6 +610,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       'latitude': city?['latitude'],
       'longitude': city?['longitude'],
       'is_default': app.addresses.isEmpty ? 1 : 0,
+      if (customFields.isNotEmpty) 'custom_fields': jsonEncode(customFields),
     });
     await app.loadAddresses();
   }

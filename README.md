@@ -1,6 +1,6 @@
-# تطبيق عملاء مأرب ماركت
+# تطبيق عملاء سريع ماركت
 
-تطبيق Flutter لنظامي أندرويد وiOS يستهلك نفس واجهة `/customer` التي يستخدمها الموقع في `maribmarket_front`.
+تطبيق Flutter لنظامي أندرويد وiOS يستهلك نفس واجهة `/customer` التي يستخدمها الموقع في `saree_front`.
 
 ## المتطلبات
 
@@ -12,7 +12,7 @@
 من محاكي أندرويد (الخادم المحلي على الجهاز المضيف):
 
 ```bash
-cd /media/ali/805CB43B5CB42E322/myproject/review/maribmarket_customer
+cd /media/ali/805CB43B5CB42E322/myproject/review/saree_customer
 flutter pub get
 flutter run --dart-define=API_URL=http://10.0.2.2:8000
 ```

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_controller.dart';
+import '../../core/business_hours.dart';
 import '../../core/json_util.dart';
 import '../../core/promo_price.dart';
 import '../../widgets/app_image.dart';
@@ -46,8 +47,24 @@ class _CartScreenState extends State<CartScreen> {
       );
     }
     final total = app.isLoggedIn ? app.cartSubTotal : app.guestCartTotal;
+    // multi-seller info if available
+    final groups = app.sellerGroups;
     return Column(
       children: [
+        if (groups.isNotEmpty)
+          Container(
+            color: Colors.orange.withValues(alpha: 0.08),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              children: [
+                const Icon(Icons.storefront, size: 14, color: Colors.orange),
+                const SizedBox(width: 6),
+                Text('${groups.length} متاجر', style: const TextStyle(fontSize: 12)),
+                const Spacer(),
+                Text('الحد ${app.checkoutConfig.maxSellersPerCheckout}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+          ),
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -151,6 +168,13 @@ class _CartScreenState extends State<CartScreen> {
                         );
                         return;
                       }
+                      // stock / seller limit guard like front
+                      if (app.sellerGroups.length > app.checkoutConfig.maxSellersPerCheckout) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('الحد الأقصى ${app.checkoutConfig.maxSellersPerCheckout} متاجر للطلب الواحد')),
+                        );
+                        return;
+                      }
                       context.push('/checkout');
                     },
                     child: Text(app.t('checkout')),
@@ -179,6 +203,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool placing = false;
   final note = TextEditingController();
   final promo = TextEditingController();
+  String? deliveryTime; // "D-M-YYYY title" like front
+  DateTime? selectedDay;
+  String? selectedSlot;
+  bool loadingCheckout = true;
 
   @override
   void initState() {
@@ -194,13 +222,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _load() async {
+    setState(() => loadingCheckout = true);
     final result = await appController.refreshCart(checkout: 1);
+    // also load multi seller if needed
+    if (appController.sellerGroups.length > 1) {
+      await appController.loadMultiSellerCheckout();
+    }
     if (!mounted) return;
-    setState(() => checkout = result.dataMap);
+    setState(() {
+      checkout = result.dataMap.isNotEmpty ? result.dataMap : appController.cart;
+      loadingCheckout = false;
+    });
   }
 
   bool _methodOn(String key) =>
       J.str(appController.paymentSettings[key]) == '1';
+
+  bool _paymentConfigured() => appController.paymentSettings.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -211,16 +249,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         body: const LoginRequired(),
       );
     }
+    if (loadingCheckout) return Scaffold(appBar: AppBar(title: Text(app.t('checkout'))), body: const Center(child: CircularProgressIndicator()));
     final items = J.maps(
       checkout?['cart'] ?? checkout?['items'] ?? app.cartProducts,
     );
     final subTotal = J.d(checkout?['sub_total'] ?? app.cartSubTotal);
-    final delivery = J.d(checkout?['delivery_charge']);
+    final delivery = J.d(checkout?['delivery_charge'] ?? checkout?['delivery_fee'] ?? app.multiSellerCheckout?.deliveryTotal);
     final discount = J.d(
       app.promoCode?['discount'] ?? checkout?['promo_discount'],
     );
     var finalTotal = J.d(
-      checkout?['final_total'],
+      checkout?['final_total'] ?? checkout?['total'],
       subTotal + delivery - discount,
     );
     final wallet = J.d(
@@ -234,12 +273,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
     final codAllowed = J.flag(checkout?['cod_allowed'] ?? 1);
     final address = app.selectedAddress;
+    final bh = app.businessHours;
+    final canPlace = app.canPlaceOrder();
+    final sellerGroups = app.sellerGroups;
+    final deliveryFees = app.deliveryFees;
 
     return Scaffold(
       appBar: AppBar(title: Text(app.t('checkout'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Business hours banner parity with front BusinessHoursBanner
+          if (bh != null && !canPlace.allowed)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.withValues(alpha: 0.3))),
+              child: Row(
+                children: [
+                  const Icon(Icons.access_time, color: Colors.red, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(
+                    canPlace.reason == 'platform'
+                        ? buildMarketplaceClosedMessage(canPlace.status)
+                        : buildSellerClosedMessage(canPlace.status, ''),
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  )),
+                ],
+              ),
+            ),
+          if (bh != null && !canPlace.allowed) const SizedBox(height: 12),
+          // seller groups like front
+          if (sellerGroups.isNotEmpty)
+            ...sellerGroups.map((g) => Card(
+              child: ListTile(
+                leading: const Icon(Icons.store),
+                title: Text(J.str(g['store_name'] ?? g['seller_id'])),
+                subtitle: Text('${J.maps(g['items']).length} منتجات'),
+                trailing: Text(money(deliveryFees['${g['seller_id']}']?['amount'] ?? 0, app.currency, app.decimals)),
+              ),
+            )),
           ListTile(
             tileColor: Colors.white,
             shape: RoundedRectangleBorder(
@@ -259,6 +331,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             },
           ),
           const SizedBox(height: 12),
+          // time slots picker like front Checkout.js
+          if (app.timeSlots.isNotEmpty) ...[
+            Text('وقت التوصيل', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 80,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: 7,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, idx) {
+                  final day = DateTime.now().add(Duration(days: idx));
+                  final isSel = selectedDay != null && selectedDay!.day == day.day && selectedDay!.month == day.month;
+                  return ChoiceChip(
+                    label: Text('${day.day}/${day.month}'),
+                    selected: isSel,
+                    onSelected: (_) => setState(() {
+                      selectedDay = day;
+                      // rebuild deliveryTime
+                      if (selectedSlot != null) deliveryTime = '${day.day}-${day.month}-${day.year} $selectedSlot';
+                    }),
+                  );
+                },
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              children: app.timeSlots.map((s) => ChoiceChip(
+                label: Text(s.title),
+                selected: selectedSlot == s.title,
+                onSelected: (_) => setState(() {
+                  selectedSlot = s.title;
+                  if (selectedDay != null) deliveryTime = '${selectedDay!.day}-${selectedDay!.month}-${selectedDay!.year} $s.title';
+                  else deliveryTime = s.title;
+                }),
+              )).toList(),
+            ),
+            const SizedBox(height: 12),
+          ],
           ...items.map(
             (item) => ListTile(
               title: Text(J.str(item['name'] ?? item['product_name'])),
@@ -267,7 +378,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           const Divider(),
           _row(app.t('sub_total'), money(subTotal, app.currency, app.decimals)),
-          _row(app.t('amount'), money(delivery, app.currency, app.decimals)),
+          _row('التوصيل', money(delivery, app.currency, app.decimals)),
+          if (app.platformFee > 0) _row('رسوم المنصة', money(app.platformFee, app.currency, app.decimals)),
           if (discount > 0)
             _row(
               app.t('discount'),
@@ -287,6 +399,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               value: walletUsed,
               onChanged: (v) => setState(() => walletUsed = v),
             ),
+          // Payment methods parity with front (9 gateways)
           if (codAllowed &&
               (_methodOn('cod_payment_method') || !_paymentConfigured()))
             RadioListTile(
@@ -304,6 +417,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               groupValue: method,
               onChanged: (v) => setState(() => method = '$v'),
             ),
+          if (_methodOn('stripe_payment_method') || _methodOn('stripe'))
+            RadioListTile(title: const Text('Stripe'), value: 'Stripe', groupValue: method, onChanged: (v) => setState(() => method = '$v')),
+          if (_methodOn('paypal_payment_method') || _methodOn('paypal'))
+            RadioListTile(title: const Text('PayPal'), value: 'Paypal', groupValue: method, onChanged: (v) => setState(() => method = '$v')),
+          if (_methodOn('paystack_payment_method') || _methodOn('paystack'))
+            RadioListTile(title: const Text('Paystack'), value: 'Paystack', groupValue: method, onChanged: (v) => setState(() => method = '$v')),
+          if (_methodOn('razorpay_payment_method') || _methodOn('razorpay'))
+            RadioListTile(title: const Text('Razorpay'), value: 'Razorpay', groupValue: method, onChanged: (v) => setState(() => method = '$v')),
+          if (_methodOn('cashfree_payment_method'))
+            RadioListTile(title: const Text('Cashfree'), value: 'Cashfree', groupValue: method, onChanged: (v) => setState(() => method = '$v')),
+          if (_methodOn('midtrans_payment_method'))
+            RadioListTile(title: const Text('Midtrans'), value: 'Midtrans', groupValue: method, onChanged: (v) => setState(() => method = '$v')),
+          if (_methodOn('phonepe_payment_method'))
+            RadioListTile(title: const Text('PhonePe'), value: 'Phonepe', groupValue: method, onChanged: (v) => setState(() => method = '$v')),
           TextField(
             controller: promo,
             decoration: InputDecoration(
@@ -326,8 +453,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           TextField(
             controller: note,
-            decoration: InputDecoration(labelText: app.t('order')),
+            decoration: InputDecoration(labelText: 'ملاحظة الطلب'),
           ),
+          if (deliveryTime != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('وقت التوصيل: $deliveryTime', style: const TextStyle(fontSize: 12, color: Colors.grey))),
           const SizedBox(height: 16),
           if (address == null)
             Padding(
@@ -337,8 +465,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 style: const TextStyle(color: Colors.red),
               ),
             ),
+          if (!canPlace.allowed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                canPlace.reason == 'platform' ? buildMarketplaceClosedMessage(canPlace.status) : buildSellerClosedMessage(canPlace.status, ''),
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
           FilledButton(
-            onPressed: placing
+            onPressed: placing || !canPlace.allowed
                 ? null
                 : () {
                     if (address == null) {
@@ -360,7 +496,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 : Text(
                     address == null
                         ? app.t('add_address_first')
-                        : app.t('place_order'),
+                        : _isGateway(method) ? 'ادفع عبر $method' : app.t('place_order'),
                   ),
           ),
         ],
@@ -368,10 +504,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  bool _paymentConfigured() {
-    final pay = appController.paymentSettings;
-    return pay.isNotEmpty;
-  }
+  bool _isGateway(String m) => ['Stripe','Paypal','Paystack','Razorpay','Cashfree','Midtrans','Phonepe'].contains(m);
 
   Future<void> _placeOrder(
     AppController app,
@@ -386,7 +519,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(app.t('confirm_order')),
-        content: Text(money(finalTotal, app.currency, app.decimals)),
+        content: Text('${money(finalTotal, app.currency, app.decimals)}\n${deliveryTime ?? ''}\n$method'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -401,42 +534,64 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
     if (ok != true || !mounted) return;
     setState(() => placing = true);
-    final variantIds = items
-        .map((e) => '${e['product_variant_id'] ?? e['id']}')
-        .join(',');
-    final qtys = items.map((e) => '${e['qty'] ?? e['quantity']}').join(',');
+    final idempotencyKey = app.buildIdempotencyKey();
     final payMethod = (walletUsed && finalTotal == 0) ? 'Wallet' : method;
-    final result = await app.api.placeOrder({
-      'product_variant_id': variantIds,
-      'quantity': qtys,
-      'total': subTotal,
-      'delivery_charge': delivery,
-      'final_total': finalTotal,
-      'payment_method': payMethod,
-      'address_id': address['id'],
-      'delivery_time': 'N/A',
-      if (note.text.trim().isNotEmpty) 'order_note': note.text.trim(),
-      if (walletUsed) 'wallet_used': 1,
-      if (walletUsed) 'wallet_balance': wallet,
-      if (app.promoCode != null)
-        'promocode_id': app.promoCode?['id'] ?? app.promoCode?['promo_code_id'],
-      'status': (payMethod == 'COD' || payMethod == 'Wallet') ? 2 : 1,
-    });
+    // try multi-seller first if groups >1 like front placeMultiSellerOrder
+    ApiResult result;
+    if (app.sellerGroups.length > 1) {
+      result = await app.api.placeMultiSellerOrder({
+        'address_id': address['id'],
+        'payment_method': payMethod,
+        'use_wallet': walletUsed ? '1' : '0',
+        if (deliveryTime != null && deliveryTime!.isNotEmpty) 'delivery_time': deliveryTime,
+        if (note.text.trim().isNotEmpty) 'order_note': note.text.trim(),
+        if (app.promoCode != null) 'promocode_id': app.promoCode?['id'] ?? app.promoCode?['promo_code_id'],
+        'idempotency_key': idempotencyKey,
+        'latitude': address['latitude'] ?? app.browseCoords.latitude,
+        'longitude': address['longitude'] ?? app.browseCoords.longitude,
+      });
+    } else {
+      result = await app.api.checkout(
+        addressId: address['id'],
+        paymentMethod: payMethod,
+        useWallet: walletUsed,
+        promocodeId: app.promoCode?['id'] ?? app.promoCode?['promo_code_id'],
+        deliveryTime: deliveryTime ?? 'N/A',
+        orderNote: note.text.trim(),
+        idempotencyKey: idempotencyKey,
+      );
+    }
     if (!mounted) return;
-    setState(() => placing = false);
     if (!result.ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result.message)));
+      setState(() => placing = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
       return;
     }
+    // gateway handling like front initiate_transaction
+    if (_isGateway(payMethod)) {
+      final checkoutGroupId = result.dataMap['checkout_group_id'] ?? result.dataMap['id'] ?? result.dataMap['group_id'];
+      if (checkoutGroupId != null) {
+        final init = await app.api.initiateTransactionForCheckoutGroup(checkoutGroupId: checkoutGroupId, paymentMethod: payMethod);
+        if (!mounted) return;
+        if (!init.ok) {
+          setState(() => placing = false);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(init.message)));
+          return;
+        }
+        // front would open StripeModal/Paypal redirect etc. Here we show success with transaction url
+        final data = init.dataMap;
+        final url = data['url'] ?? data['redirect_url'] ?? data['snap_url'] ?? data['payment_url'];
+        if (url != null && url.toString().isNotEmpty && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('افتح رابط الدفع: $url')));
+        }
+      }
+    }
+    setState(() => placing = false);
     app.clearPromo();
     await app.refreshCart();
     if (!mounted) return;
     context.go('/orders');
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(app.t('place_order'))));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(app.t('place_order'))));
   }
 
   Widget _row(String label, String value, {bool bold = false}) {

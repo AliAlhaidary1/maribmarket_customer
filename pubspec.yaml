@@ -1,4 +1,4 @@
-name: maribmarket_customer
+name: saree_customer
 description: تطبيق سريع ماركت للعملاء.
 publish_to: "none"
 version: 1.0.0+1
@@ -30,9 +30,21 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   assets:
     - assets/i18n/
-    - assets/brand/saree.png
+    - assets/brand/
+flutter_launcher_icons:
+  android: launcher_icon
+  ios: true
+  image_path: assets/brand/saree-market-mark.png
+  adaptive_icon_background: '#0A2540'
+  adaptive_icon_foreground: assets/brand/saree-market-mark.png
+  web:
+    generate: true
+    image_path: assets/brand/saree-market-favicon.png
+    background_color: '#0A2540'
+    theme_color: '#0A2540'

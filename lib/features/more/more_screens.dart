@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/city_mode.dart';
@@ -439,15 +441,17 @@ class _OffersScreenState extends State<OffersScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  GridView.builder(
+                  LayoutBuilder(builder: (ctx,c){
+                    final count = c.maxWidth >= 900 ? 4 : c.maxWidth >= 600 ? 3 : 2;
+                    return GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
+                        SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: count,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
-                          childAspectRatio: 0.62,
+                          childAspectRatio: count > 2 ? 0.68 : 0.62,
                         ),
                     itemCount: products.length,
                     itemBuilder: (_, i) => ProductCard(
@@ -456,7 +460,7 @@ class _OffersScreenState extends State<OffersScreen> {
                         '/product/${products[i]['slug'] ?? products[i]['id']}',
                       ),
                     ),
-                  ),
+                  );}),
                 ],
               ],
             ),
@@ -517,6 +521,10 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
   bool busy = false;
   ({double latitude, double longitude})? pickupPoint;
   ({double latitude, double longitude})? dropoffPoint;
+  List<XFile> images = [];
+  List<Map<String, dynamic>> categories = [];
+  String? selectedCategoryId;
+  bool loadingConfig = true;
 
   @override
   void initState() {
@@ -530,6 +538,17 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
       if (lat != null && lng != null)
         dropoffPoint = (latitude: lat, longitude: lng);
     }
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    final cfg = await appController.api.akhdimniConfig();
+    final cat = await appController.api.akhdimniCategories();
+    if (!mounted) return;
+    setState(() {
+      categories = cat.dataMaps.isNotEmpty ? cat.dataMaps : J.maps(cfg.dataMap['categories']);
+      loadingConfig = false;
+    });
   }
 
   @override
@@ -549,13 +568,27 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
       'pickup_address': pickup.text.trim(),
       'dropoff_address': dropoff.text.trim(),
       'details': details.text.trim(),
+      'item_description': details.text.trim(),
+      'special_items_text': details.text.trim(),
       'city_id': city?['id'],
+      'akhdimni_category_id': selectedCategoryId,
       'pickup_latitude': pick?.latitude,
       'pickup_longitude': pick?.longitude,
       'dropoff_latitude': drop?.latitude,
       'dropoff_longitude': drop?.longitude,
       'payment_method': 'COD',
     };
+  }
+
+  FormData get _formData {
+    final data = FormData();
+    _fields.forEach((k, v) {
+      if (v != null && '$v'.isNotEmpty) data.fields.add(MapEntry(k, '$v'));
+    });
+    for (final img in images) {
+      data.files.add(MapEntry('images[]', MultipartFile.fromFileSync(img.path, filename: img.name)));
+    }
+    return data;
   }
 
   Future<void> _useMyLocation() async {
@@ -598,12 +631,19 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
       );
       return;
     }
+    if (details.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(app.t('fill_required_fields'))));
+      return;
+    }
     setState(() => busy = true);
-    final result = await app.api.akhdimniEstimate(_fields);
+    // front uses FormData for estimate
+    final data = FormData();
+    _fields.forEach((k, v) { if (v != null && '$v'.isNotEmpty) data.fields.add(MapEntry(k, '$v')); });
+    final result = await app.api.akhdimniEstimateRaw(data);
     if (!mounted) return;
     setState(() {
       busy = false;
-      estimate = result.ok ? result.dataMap : null;
+      estimate = result.ok ? (result.dataMap.isNotEmpty ? result.dataMap : J.map(result.raw)) : null;
     });
     if (!result.ok) {
       ScaffoldMessenger.of(
@@ -626,7 +666,9 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
           money(
             estimate?['total'] ??
                 estimate?['fare'] ??
-                estimate?['delivery_charge'],
+                estimate?['delivery_charge'] ??
+                estimate?['deliveryCharge'] ??
+                0,
             app.currency,
             app.decimals,
           ),
@@ -645,7 +687,14 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
     );
     if (ok != true || !mounted) return;
     setState(() => busy = true);
-    final result = await app.api.akhdimniPlace(_fields);
+    // build FormData with images like front AkhdimniCreate.jsx
+    final data = FormData();
+    _fields.forEach((k, v) { if (v != null && '$v'.isNotEmpty) data.fields.add(MapEntry(k, '$v')); });
+    for (final img in images) {
+      // async version for place
+      data.files.add(MapEntry('images[]', await MultipartFile.fromFile(img.path, filename: img.name)));
+    }
+    final result = await app.api.akhdimniPlaceRaw(data);
     if (!mounted) return;
     setState(() => busy = false);
     if (result.ok) {
@@ -665,6 +714,13 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (categories.isNotEmpty)
+            DropdownButtonFormField<String>(
+              initialValue: selectedCategoryId,
+              items: categories.map((c)=> DropdownMenuItem(value: '${c['id']}', child: Text(J.str(c['name_ar'] ?? c['name'])))).toList(),
+              onChanged: (v)=> setState(()=> selectedCategoryId=v),
+              decoration: const InputDecoration(labelText: 'الفئة'),
+            ),
           TextField(
             controller: pickup,
             decoration: const InputDecoration(labelText: 'نقطة الاستلام'),
@@ -682,7 +738,16 @@ class _AkhdimniCreateScreenState extends State<AkhdimniCreateScreen> {
           TextField(
             controller: details,
             maxLines: 3,
-            decoration: const InputDecoration(labelText: 'التفاصيل'),
+            decoration: const InputDecoration(labelText: 'التفاصيل *'),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () async {
+              final picked = await ImagePicker().pickMultiImage();
+              if (picked.isNotEmpty && mounted) setState(()=> images = picked);
+            },
+            icon: const Icon(Icons.image),
+            label: Text(images.isEmpty ? 'إضافة صور (اختياري)' : '${images.length} صور'),
           ),
           if (estimate != null) ...[
             const SizedBox(height: 8),
@@ -801,17 +866,25 @@ class _AkhdimniOrderDetailsScreenState
     appController.api.akhdimniOrder(widget.id).then((res) {
       if (!mounted) return;
       setState(() {
-        order = res.dataMap.isNotEmpty ? res.dataMap : J.map(res.raw);
+        order = res.dataMap.isNotEmpty ? res.dataMap : J.map(res.raw['data'] ?? res.raw);
         loading = false;
       });
     });
   }
 
+  Future<void> _cancel() async {
+    final ok = await showDialog<bool>(context: context, builder: (ctx)=> AlertDialog(title: const Text('إلغاء الطلب؟'), actions: [TextButton(onPressed: ()=>Navigator.pop(ctx,false), child: const Text('لا')), FilledButton(onPressed: ()=>Navigator.pop(ctx,true), child: const Text('نعم'))]));
+    if (ok != true) return;
+    final res = await appController.api.akhdimniCancel(widget.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.ok ? 'تم الإلغاء' : res.message)));
+    if (res.ok && mounted) context.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final app = appController;
     return Scaffold(
-      appBar: AppBar(title: Text('طلب #${widget.id}')),
+      appBar: AppBar(title: Text('طلب #${widget.id}'), actions: [IconButton(icon: const Icon(Icons.cancel), onPressed: _cancel)]),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -819,7 +892,7 @@ class _AkhdimniOrderDetailsScreenState
               children: [
                 ListTile(
                   title: const Text('الحالة'),
-                  subtitle: Text(J.str(order?['status'])),
+                  subtitle: Text(J.str(order?['status'] ?? order?['order_status'])),
                 ),
                 ListTile(
                   title: const Text('الاستلام'),
@@ -831,18 +904,20 @@ class _AkhdimniOrderDetailsScreenState
                 ),
                 ListTile(
                   title: const Text('التفاصيل'),
-                  subtitle: Text(J.str(order?['details'] ?? order?['notes'])),
+                  subtitle: Text(J.str(order?['details'] ?? order?['notes'] ?? order?['item_description'])),
                 ),
                 ListTile(
                   title: const Text('الإجمالي'),
                   subtitle: Text(
                     money(
-                      order?['total'] ?? order?['fare'],
-                      app.currency,
-                      app.decimals,
+                      order?['total'] ?? order?['fare'] ?? order?['delivery_charge'],
+                      appController.currency,
+                      appController.decimals,
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(onPressed: _cancel, icon: const Icon(Icons.cancel), label: const Text('إلغاء الطلب')),
               ],
             ),
     );

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'brand/brand_config.dart';
+
 /// Saree Market (سريع ماركت) brand design tokens.
 abstract final class AppTheme {
   static const primaryNavy = Color(0xFF0A2540);
@@ -45,26 +47,37 @@ abstract final class AppTheme {
     );
   }
 
-  static ThemeData build({required Locale locale}) {
-    final textTheme = _textTheme(locale);
+  static ThemeData build({required Locale locale, BrandConfig? brand}) {
+    final b = brand ?? BrandConfig.defaults;
+    final navy = b.primary;
+    final orange = b.accent;
+    final backgroundWhite = b.background;
+    final surfaceGrey = b.surface;
+    final ink = b.textPrimary;
+    final muted = b.textSecondary;
+
+    final textTheme = _textTheme(locale).apply(
+      bodyColor: ink,
+      displayColor: ink,
+    );
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: ColorScheme(
         brightness: Brightness.light,
-        primary: primaryNavy,
+        primary: navy,
         onPrimary: backgroundWhite,
-        secondary: accentOrange,
+        secondary: orange,
         onSecondary: backgroundWhite,
         surface: backgroundWhite,
-        onSurface: textPrimary,
-        error: const Color(0xFFDC2626),
+        onSurface: ink,
+        error: b.error,
         onError: backgroundWhite,
       ),
       scaffoldBackgroundColor: surfaceGrey,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
-        backgroundColor: primaryNavy,
+        backgroundColor: navy,
         foregroundColor: backgroundWhite,
         elevation: 0,
         centerTitle: false,
@@ -72,34 +85,34 @@ abstract final class AppTheme {
           color: backgroundWhite,
           fontWeight: FontWeight.w700,
         ),
-        iconTheme: const IconThemeData(color: backgroundWhite),
+        iconTheme: IconThemeData(color: backgroundWhite),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: backgroundWhite,
-        indicatorColor: accentOrange.withValues(alpha: 0.15),
+        indicatorColor: orange.withValues(alpha: 0.15),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return textTheme.labelSmall?.copyWith(
-            color: selected ? accentOrange : textSecondary,
+            color: selected ? orange : muted,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: accentOrange);
+            return IconThemeData(color: orange);
           }
-          return const IconThemeData(color: textSecondary);
+          return IconThemeData(color: muted);
         }),
       ),
       cardTheme: CardThemeData(
         color: backgroundWhite,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        shadowColor: primaryNavy.withValues(alpha: 0.08),
+        shadowColor: navy.withValues(alpha: 0.08),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: accentOrange,
+          backgroundColor: orange,
           foregroundColor: backgroundWhite,
           minimumSize: const Size.fromHeight(48),
           elevation: 0,
@@ -111,7 +124,7 @@ abstract final class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: accentOrange,
+          backgroundColor: orange,
           foregroundColor: backgroundWhite,
           minimumSize: const Size.fromHeight(48),
           elevation: 0,
@@ -130,30 +143,30 @@ abstract final class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryNavy.withValues(alpha: 0.1)),
+          borderSide: BorderSide(color: navy.withValues(alpha: 0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: accentOrange, width: 2),
+          borderSide: BorderSide(color: orange, width: 2),
         ),
-        hintStyle: textTheme.bodyMedium?.copyWith(color: textSecondary),
+        hintStyle: textTheme.bodyMedium?.copyWith(color: muted),
       ),
       chipTheme: ChipThemeData(
-        selectedColor: accentOrange.withValues(alpha: 0.15),
+        selectedColor: orange.withValues(alpha: 0.15),
         labelStyle: textTheme.bodySmall,
-        side: BorderSide(color: primaryNavy.withValues(alpha: 0.12)),
+        side: BorderSide(color: navy.withValues(alpha: 0.12)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      badgeTheme: const BadgeThemeData(
-        backgroundColor: accentOrange,
+      badgeTheme: BadgeThemeData(
+        backgroundColor: orange,
         textColor: backgroundWhite,
       ),
       dividerTheme: DividerThemeData(
-        color: primaryNavy.withValues(alpha: 0.08),
+        color: navy.withValues(alpha: 0.08),
         thickness: 1,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: primaryNavy,
+        backgroundColor: navy,
         contentTextStyle: textTheme.bodyMedium?.copyWith(
           color: backgroundWhite,
         ),
@@ -161,8 +174,8 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: accentOrange,
-        linearTrackColor: primaryNavy.withValues(alpha: 0.1),
+        color: orange,
+        linearTrackColor: navy.withValues(alpha: 0.1),
       ),
     );
   }

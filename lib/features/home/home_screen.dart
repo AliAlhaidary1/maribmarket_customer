@@ -519,14 +519,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _productGrid(List<Map<String, dynamic>> items) {
-    return SliverPadding(
+    return SliverLayoutBuilder(builder: (ctx, c){
+      final w = c.crossAxisExtent;
+      final count = w >= 900 ? 4 : w >= 600 ? 3 : 2;
+      final aspect = w >= 600 ? 0.68 : 0.62;
+      return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: count,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 0.62,
+          childAspectRatio: aspect,
         ),
         delegate: SliverChildBuilderDelegate(
           (_, i) => ProductCard(
@@ -537,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> {
           childCount: items.length,
         ),
       ),
-    );
+    );});
   }
 
   void _openProduct(Map<String, dynamic> product) {

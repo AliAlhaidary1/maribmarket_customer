@@ -9,11 +9,13 @@ import 'features/account/account_screens.dart';
 import 'features/assistant/assistant_screen.dart';
 import 'features/auth/auth_screens.dart';
 import 'features/cart/cart_screens.dart';
+import 'features/checkout_groups/checkout_groups_screens.dart';
 import 'features/haraj/haraj_screens.dart';
 import 'features/home/home_screen.dart';
 import 'features/more/more_screens.dart';
 import 'features/products/categories_screen.dart';
 import 'features/products/products_screens.dart';
+import 'features/roles/roles_screens.dart';
 import 'widgets/ui_helpers.dart';
 
 GoRouter buildRouter() {
@@ -190,12 +192,32 @@ GoRouter buildRouter() {
         ),
       ),
       GoRoute(
+        path: '/haraj/edit/:id',
+        pageBuilder: (_, state) => AppTheme.slidePage(
+          key: state.pageKey,
+          child: HarajEditScreen(id: state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
         path: '/haraj/:id',
         pageBuilder: (_, state) => AppTheme.slidePage(
           key: state.pageKey,
           child: HarajDetailsScreen(id: state.pathParameters['id']!),
         ),
       ),
+      GoRoute(path: '/checkout-groups', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const CheckoutGroupsScreen())),
+      GoRoute(path: '/checkout-groups/:id', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: CheckoutGroupDetailsScreen(id: s.pathParameters['id']!))),
+      GoRoute(path: '/seller/orders', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const SellerOrdersScreen())),
+      GoRoute(path: '/seller/orders/:id', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: SellerOrderDetailsScreen(id: s.pathParameters['id']!))),
+      GoRoute(path: '/seller/settlement', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const SellerSettlementScreen())),
+      GoRoute(path: '/courier', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const CourierDashboardScreen())),
+      GoRoute(path: '/courier/assignments', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const CourierAssignmentsScreen())),
+      GoRoute(path: '/courier/assignments/:id', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: CourierAssignmentDetailsScreen(id: s.pathParameters['id']!))),
+      GoRoute(path: '/courier/settlement', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const CourierSettlementScreen())),
+      GoRoute(path: '/admin/checkout-groups', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const AdminCheckoutGroupsScreen())),
+      GoRoute(path: '/admin/checkout-groups/:id', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: AdminCheckoutGroupDetailsScreen(id: s.pathParameters['id']!))),
+      GoRoute(path: '/admin/dispatch', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const AdminDispatchScreen())),
+      GoRoute(path: '/admin/returns', pageBuilder: (_, s)=> AppTheme.slidePage(key: s.pageKey, child: const AdminReturnsScreen())),
       GoRoute(
         path: '/akhdimni',
         pageBuilder: (_, state) => AppTheme.slidePage(
@@ -410,16 +432,38 @@ class _BrandHeader extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      'assets/brand/saree.png',
-                      width: 36,
-                      height: 36,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.shopping_cart_rounded,
-                        color: AppTheme.accentOrange,
-                        size: 28,
-                      ),
-                    ),
+                    child: app.brand.logoUrl != null && app.brand.logoUrl!.isNotEmpty
+                        ? Image.network(
+                            app.brand.logoUrl!,
+                            width: 36,
+                            height: 36,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/brand/saree-market-logo.png',
+                              width: 36,
+                              height: 36,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.shopping_cart_rounded,
+                                color: AppTheme.accentOrange,
+                                size: 28,
+                              ),
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/brand/saree-market-logo.png',
+                            width: 36,
+                            height: 36,
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/brand/saree-market-mark.png',
+                              width: 36,
+                              height: 36,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.shopping_cart_rounded,
+                                color: AppTheme.accentOrange,
+                                size: 28,
+                              ),
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -658,7 +702,7 @@ class MaribCustomerApp extends StatelessWidget {
             textDirection: appController.i18n.direction,
             child: child ?? const SizedBox.shrink(),
           ),
-          theme: AppTheme.build(locale: locale),
+          theme: AppTheme.build(locale: locale, brand: appController.brand),
         );
       },
     );
